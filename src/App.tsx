@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { Settings, Info, ExternalLink, Mail, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Settings, Info, ExternalLink, Mail, X, CheckCircle2, AlertCircle, Loader2, History, Coins } from 'lucide-react';
+
+const PATCH_NOTES = [
+  { date: '2026-04-19', content: '패치노트 기능 추가, API 예상 비용 표시 기능 추가, 초기 팝업 비활성화' },
+  { date: '2026-04-11', content: '상단 이미지 데이터 분석 테마로 변경' },
+  { date: '2026-04-11', content: 'alert() 오류 수정 및 로딩 시각화 개선' },
+  { date: '2026-04-11', content: '이미지 배너 최적화 및 복사 방지 기능 추가' },
+  { date: '2026-04-11', content: '초기 빌드 생성 및 UI/UX 개선' },
+];
 
 export default function App() {
   const [apiKey, setApiKey] = useState(process.env.GEMINI_API_KEY || '');
@@ -12,9 +20,11 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   
-  const [showInstructions, setShowInstructions] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showPatchNotes, setShowPatchNotes] = useState(false);
+  const [showApiCost, setShowApiCost] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
 
   const hasApiKey = apiKey.trim().length > 0;
@@ -109,7 +119,21 @@ export default function App() {
       </div>
 
       {/* Top Right Controls */}
-      <div className="absolute top-4 right-4 flex gap-2 z-10">
+      <div className="absolute top-4 right-4 flex flex-wrap justify-end gap-2 z-10">
+        <button 
+          onClick={() => setShowApiCost(true)}
+          className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-md shadow-sm text-sm font-medium hover:bg-white transition-colors"
+        >
+          <Coins className="w-4 h-4 text-amber-500" />
+          <span className="hidden sm:inline">예상 비용</span>
+        </button>
+        <button 
+          onClick={() => setShowPatchNotes(true)}
+          className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-md shadow-sm text-sm font-medium hover:bg-white transition-colors"
+        >
+          <History className="w-4 h-4" />
+          <span className="hidden sm:inline">패치노트</span>
+        </button>
         <button 
           onClick={() => setShowInstructions(true)}
           className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-md shadow-sm text-sm font-medium hover:bg-white transition-colors"
@@ -361,6 +385,79 @@ export default function App() {
             <button 
               onClick={() => setAlertMessage('')}
               className="w-full bg-neutral-900 text-white py-2 rounded-md font-medium hover:bg-neutral-800 transition-colors"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Patch Notes Modal */}
+      {showPatchNotes && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[55] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+            <button 
+              onClick={() => setShowPatchNotes(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <History className="w-5 h-5" />
+              패치노트
+            </h3>
+            <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2">
+              {PATCH_NOTES.map((note, index) => (
+                <div key={index} className="border-l-2 border-neutral-200 pl-4 py-1">
+                  <div className="text-xs font-bold text-neutral-400 mb-1">{note.date}</div>
+                  <div className="text-sm text-neutral-700">{note.content}</div>
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={() => setShowPatchNotes(false)}
+              className="w-full mt-6 bg-neutral-900 text-white py-2 rounded-md font-medium hover:bg-neutral-800 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* API Cost Modal */}
+      {showApiCost && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[55] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+            <button 
+              onClick={() => setShowApiCost(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-amber-600">
+              <Coins className="w-5 h-5" />
+              API 예상 비용 안내
+            </h3>
+            <div className="space-y-4">
+              <div className="bg-amber-50 p-4 rounded-md border border-amber-100">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">최소 비용 (짧은 요청/응답)</span>
+                  <span className="text-sm font-bold text-amber-700">약 5원</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">최대 비용 (긴 요청/응답)</span>
+                  <span className="text-sm font-bold text-amber-700">약 50원</span>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500 leading-relaxed italic">
+                * 위 비용은 Gemini 3.1 Pro 모델의 현재 토큰당 단가와 평균적인 마케팅 문구 생성량을 기준으로 계산되었습니다.<br/>
+                * 결과물의 길이나 입력의 복잡도에 따라 실제 청구되는 비용에는 오차가 발생할 수 있습니다.<br/>
+                * 비용은 원화(KRW) 환율에 따라 변동될 수 있습니다.
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowApiCost(false)}
+              className="w-full mt-6 bg-neutral-900 text-white py-2 rounded-md font-medium hover:bg-neutral-800 transition-colors"
             >
               확인
             </button>
