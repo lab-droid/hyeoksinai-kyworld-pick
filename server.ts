@@ -35,6 +35,13 @@ async function startServer() {
         });
       }
 
+      // Check for non-ASCII characters in the API key (e.g. Korean letters) to prevent ByteString conversion errors in fetch headers
+      if (/[^\x00-\x7F]/.test(finalKey)) {
+        return res.status(400).json({
+          error: 'API Key에 한글 등 올바르지 않은 문자나 설명용 텍스트가 포함되어 있습니다. 영어와 숫자로 구성된 유효한 Gemini API Key를 입력해주세요.'
+        });
+      }
+
       const ai = new GoogleGenAI({ 
         apiKey: finalKey,
         httpOptions: {

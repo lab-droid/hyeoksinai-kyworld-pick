@@ -44,6 +44,13 @@ export default function App() {
       return;
     }
 
+    const currentKey = (userApiKey || apiKey).trim();
+    if (/[^\x00-\x7F]/.test(currentKey)) {
+      setAlertMessage('API Key에 올바르지 않은 문자(한글 등)가 포함되어 있습니다. 우측 상단 API Key 설정에서 올바른 Key를 영문/숫자로 입력해주세요.');
+      setShowApiKeyModal(true);
+      return;
+    }
+
     setIsGenerating(true);
     setProgress(0);
     setOutput('');
@@ -111,7 +118,12 @@ export default function App() {
   };
 
   const handleSaveApiKey = () => {
-    setApiKey(userApiKey);
+    const trimmed = userApiKey.trim();
+    if (/[^\x00-\x7F]/.test(trimmed)) {
+      setAlertMessage('API Key에 올바르지 않은 문자(한글 등)가 포함되어 있습니다. 영문/숫자로 구성된 올바른 Key를 입력해주세요.');
+      return;
+    }
+    setApiKey(trimmed);
     setShowApiKeyModal(false);
   };
 
