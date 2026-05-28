@@ -13,7 +13,17 @@ const PATCH_NOTES = [
 
 export default function App() {
   const getInitialApiKey = () => {
-    const key = process.env.GEMINI_API_KEY || '';
+    let key = '';
+    try {
+      key = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) || '';
+    } catch (e) {}
+    
+    if (!key) {
+      try {
+        key = (typeof process !== 'undefined' && process.env) ? (process.env.GEMINI_API_KEY || '') : '';
+      } catch (e) {}
+    }
+
     if (key === 'MY_GEMINI_API_KEY' || key === 'YOUR_GEMINI_API_KEY' || key.includes('placeholder')) {
       return '';
     }
@@ -67,34 +77,97 @@ export default function App() {
     }, 300);
 
     try {
-      const response = await fetch('/api/generate-keywords', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          productName,
-          targetAudience,
-          marketingGoal,
-          userApiKey: userApiKey || apiKey,
-        }),
-      });
-
       let data: any = null;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        throw new Error(text || `서버 오류 (${response.status})`);
+      let useClientFallback = false;
+
+      // 1. Try Express backend first
+      try {
+        const response = await fetch('/api/generate-keywords', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            productName,
+            targetAudience,
+            marketingGoal,
+            userApiKey: userApiKey || apiKey,
+          }),
+        });
+
+        const contentType = response.headers.get('content-type');
+        if (response.ok && contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          // If the server returns HTML (Cloudflare Pages fallback for missing route) or returns 404/others
+          if (response.status === 404 || (contentType && contentType.includes('text/html'))) {
+            useClientFallback = true;
+          } else {
+            const text = await response.text().catch(() => '');
+            throw new Error(text || `서버 오류 (${response.status})`);
+          }
+        }
+      } catch (backendError) {
+        console.warn('Backend request failed or not found, trying client-side fallback:', backendError);
+        useClientFallback = true;
+      }
+
+      // 2. Client fallback direct call to Gemini API
+      if (useClientFallback) {
+        const activeKey = (userApiKey || apiKey || '').trim();
+        if (!activeKey) {
+          throw new Error('Cloudflare 배포 환경에서는 개별 API Key가 필요합니다. 우측 상단 [API Key 설정] 버튼을 클릭하여 유효한 Google Gemini API Key를 등록해주셔야 정상 작동합니다.');
+        }
+
+        const prompt = `당신은 마케팅 전문가입니다. 다음 정보를 바탕으로 마케팅용 키워드를 추천해주세요.
+마크다운 문법(*, #, - 등)을 사용하지 말고 평문으로 작성해주세요.
+
+제품/서비스명: ${productName}
+타겟 고객: ${targetAudience}
+마케팅 목적: ${marketingGoal}
+
+출력 형식:
+1. 핵심 키워드 (3개)
+2. 연관 키워드 (5개)
+3. 롱테일 키워드 (3개)
+4. 해시태그 추천 (5개)`;
+
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${activeKey}`;
+        const geminiResponse = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt,
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+
+        if (!geminiResponse.ok) {
+          const geminiErrorData = await geminiResponse.json().catch(() => ({}));
+          const geminiErrorMsg = geminiErrorData?.error?.message || `HTTP ${geminiResponse.status}`;
+          throw new Error(`Google Gemini API 오류: ${geminiErrorMsg}`);
+        }
+
+        const geminiData = await geminiResponse.json();
+        const generatedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!generatedText) {
+          throw new Error('Gemini API로부터 응답 텍스트를 받지 못했습니다.');
+        }
+
+        data = { text: generatedText };
       }
 
       clearInterval(progressInterval);
-
-      if (!response.ok) {
-        throw new Error(data?.error || '알 수 없는 오류가 발생했습니다.');
-      }
-
       setProgress(100);
       setOutput(data?.text || '결과를 생성하지 못했습니다.');
     } catch (error: any) {
