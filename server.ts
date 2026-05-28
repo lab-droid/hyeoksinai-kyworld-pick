@@ -71,11 +71,25 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+    try {
+      const vite = await createViteServer({
+        server: { 
+          middlewareMode: true,
+          hmr: false, // Explicitly disable HMR to avoid port 24678 conflicts
+        },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+      console.log('Vite dev middleware loaded successfully.');
+    } catch (viteError) {
+      console.error('Failed to initialize Vite middleware:', viteError);
+      // Fallback to serving dist in case of Vite middleware issues
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
