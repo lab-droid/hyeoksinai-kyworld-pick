@@ -73,16 +73,23 @@ export default function App() {
         }),
       });
 
-      const data = await response.json();
+      let data: any = null;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(text || `서버 오류 (${response.status})`);
+      }
 
       clearInterval(progressInterval);
 
       if (!response.ok) {
-        throw new Error(data.error || '알 수 없는 오류가 발생했습니다.');
+        throw new Error(data?.error || '알 수 없는 오류가 발생했습니다.');
       }
 
       setProgress(100);
-      setOutput(data.text || '결과를 생성하지 못했습니다.');
+      setOutput(data?.text || '결과를 생성하지 못했습니다.');
     } catch (error: any) {
       console.error('Generation error:', error);
       clearInterval(progressInterval);

@@ -11,28 +11,28 @@ async function startServer() {
 
   // API endpoint for keyword generation
   app.post('/api/generate-keywords', async (req, res) => {
-    const { productName, targetAudience, marketingGoal, userApiKey } = req.body;
-
-    if (!productName || !targetAudience || !marketingGoal) {
-      return res.status(400).json({ error: '모든 입력 항목을 채워주세요.' });
-    }
-
-    // Determine API Key
-    // If process.env.GEMINI_API_KEY is just a placeholder, ignore it
-    let serverKey = process.env.GEMINI_API_KEY || '';
-    if (serverKey === 'MY_GEMINI_API_KEY' || serverKey === 'YOUR_GEMINI_API_KEY' || serverKey.includes('placeholder')) {
-      serverKey = '';
-    }
-
-    const finalKey = (userApiKey && userApiKey.trim()) ? userApiKey.trim() : serverKey;
-
-    if (!finalKey) {
-      return res.status(400).json({ 
-        error: 'API Key가 설정되지 않았습니다. 우측 상단의 API Key 버튼을 클릭하여 입력하거나 설정 패널을 확인해주세요.' 
-      });
-    }
-
     try {
+      const { productName, targetAudience, marketingGoal, userApiKey } = req.body || {};
+
+      if (!productName || !targetAudience || !marketingGoal) {
+        return res.status(400).json({ error: '모든 입력 항목을 채워주세요.' });
+      }
+
+      // Determine API Key
+      // If process.env.GEMINI_API_KEY is just a placeholder, ignore it
+      let serverKey = process.env.GEMINI_API_KEY || '';
+      if (serverKey === 'MY_GEMINI_API_KEY' || serverKey === 'YOUR_GEMINI_API_KEY' || serverKey.includes('placeholder')) {
+        serverKey = '';
+      }
+
+      const finalKey = (userApiKey && userApiKey.trim()) ? userApiKey.trim() : serverKey;
+
+      if (!finalKey) {
+        return res.status(400).json({ 
+          error: 'API Key가 설정되지 않았습니다. 우측 상단의 API Key 버튼을 클릭하여 입력하거나 설정 패널을 확인해주세요.' 
+        });
+      }
+
       const ai = new GoogleGenAI({ 
         apiKey: finalKey,
         httpOptions: {
@@ -61,11 +61,11 @@ async function startServer() {
         contents: prompt,
       });
 
-      res.json({ text: response.text || '결과를 생성하지 못했습니다.' });
+      return res.json({ text: response.text || '결과를 생성하지 못했습니다.' });
     } catch (error: any) {
       console.error('Gemini API Error:', error);
       const errorMessage = error?.message || String(error);
-      res.status(500).json({ error: errorMessage });
+      return res.status(500).json({ error: errorMessage });
     }
   });
 
