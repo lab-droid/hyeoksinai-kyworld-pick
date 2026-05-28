@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { Settings, Info, ExternalLink, Mail, X, CheckCircle2, AlertCircle, Loader2, History, Coins } from 'lucide-react';
 
 const PATCH_NOTES = [
@@ -13,7 +12,15 @@ const PATCH_NOTES = [
 ];
 
 export default function App() {
-  const [apiKey, setApiKey] = useState(process.env.GEMINI_API_KEY || '');
+  const getInitialApiKey = () => {
+    const key = process.env.GEMINI_API_KEY || '';
+    if (key === 'MY_GEMINI_API_KEY' || key === 'YOUR_GEMINI_API_KEY' || key.includes('placeholder')) {
+      return '';
+    }
+    return key;
+  };
+
+  const [apiKey, setApiKey] = useState(getInitialApiKey());
   const [userApiKey, setUserApiKey] = useState('');
   const [productName, setProductName] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -29,14 +36,9 @@ export default function App() {
   const [showApiCost, setShowApiCost] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
 
-  const hasApiKey = apiKey.trim().length > 0;
+  const hasApiKey = apiKey.trim().length > 0 || userApiKey.trim().length > 0;
 
   const handleGenerate = async () => {
-    if (!hasApiKey) {
-      setAlertMessage('API Key가 필요합니다. 우측 상단 설정에서 API Key를 입력해주세요.');
-      setShowApiKeyModal(true);
-      return;
-    }
     if (!productName || !targetAudience || !marketingGoal) {
       setAlertMessage('모든 입력 항목을 채워주세요.');
       return;
@@ -58,37 +60,41 @@ export default function App() {
     }, 300);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-      const prompt = `당신은 마케팅 전문가입니다. 다음 정보를 바탕으로 마케팅용 키워드를 추천해주세요.
-마크다운 문법(*, #, - 등)을 사용하지 말고 평문으로 작성해주세요.
-
-제품/서비스명: ${productName}
-타겟 고객: ${targetAudience}
-마케팅 목적: ${marketingGoal}
-
-출력 형식:
-1. 핵심 키워드 (3개)
-2. 연관 키워드 (5개)
-3. 롱테일 키워드 (3개)
-4. 해시태그 추천 (5개)`;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
-        contents: prompt,
+      const response = await fetch('/api/generate-keywords', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productName,
+          targetAudience,
+          marketingGoal,
+          userApiKey: userApiKey || apiKey,
+        }),
       });
 
+      const data = await response.json();
+
       clearInterval(progressInterval);
-      setProgress(100);
-      try {
-        setOutput(response.text || '결과를 생성하지 못했습니다.');
-      } catch (e) {
-        setOutput('결과를 생성하지 못했습니다. (응답이 차단되었거나 텍스트가 없습니다.)');
+
+      if (!response.ok) {
+        throw new Error(data.error || '알 수 없는 오류가 발생했습니다.');
       }
-    } catch (error) {
+
+      setProgress(100);
+      setOutput(data.text || '결과를 생성하지 못했습니다.');
+    } catch (error: any) {
       console.error('Generation error:', error);
       clearInterval(progressInterval);
       setProgress(0);
-      setAlertMessage('키워드 생성 중 오류가 발생했습니다. API Key가 유효한지 확인해주세요.\n\n상세 오류: ' + (error instanceof Error ? error.message : String(error)));
+      
+      let msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('API Key') || msg.includes('API key') || msg.includes('KEY_INVALID') || msg.includes('not valid')) {
+        setAlertMessage('API Key가 유효하지 않거나 필요합니다. 우측 상단 설정에서 유효한 API Key를 입력해주세요.');
+        setShowApiKeyModal(true);
+      } else {
+        setAlertMessage('키워드 생성 중 오류가 발생했습니다. API Key가 유효한지 확인해주세요.\n\n상세 오류: ' + msg);
+      }
     } finally {
       setTimeout(() => {
         setIsGenerating(false);
