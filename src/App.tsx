@@ -1,8 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Info, ExternalLink, Mail, X, CheckCircle2, AlertCircle, Loader2, History, Coins, Copy, Check } from 'lucide-react';
+import { Settings, Info, ExternalLink, Mail, X, CheckCircle2, AlertCircle, Loader2, History, Coins, Copy, Check, Eye, EyeOff } from 'lucide-react';
+
+const AUDIENCE_OPTIONS = [
+  { value: '2030 직장인', label: '2030 직장인' },
+  { value: '대학생 및 청년층', label: '대학생 및 청년층' },
+  { value: '소상공인 및 1인 자영업자', label: '소상공인 및 1인 자영업자' },
+  { value: '3040 학부모 및 주부', label: '3040 학부모 및 주부' },
+  { value: 'IT 기획자 및 개발자', label: 'IT 기획자 및 개발자' },
+  { value: '뷰티 및 패션 관심층', label: '뷰티 및 패션 관심층' },
+  { value: '은퇴 국가 유공자 및 실버 세대', label: '은퇴 국가 유공자 및 실버 세대' },
+  { value: 'custom', label: '기타 (직접 입력)' },
+];
+
+const GOAL_OPTIONS = [
+  { value: '브랜드 인지도 향상', label: '브랜드 인지도 향상' },
+  { value: '신규 가입 및 회원 유치', label: '신규 가입 및 회원 유치' },
+  { value: '매출 직접 증대 및 구매 전환 유도', label: '매출 직접 증대 및 구매 전환 유도' },
+  { value: '웹사이트 트래픽 증가 및 클릭 유도', label: '웹사이트 트래픽 증가 및 클릭 유도' },
+  { value: '기업/브랜드 이미지 신뢰도 구축', label: '기업/브랜드 이미지 신뢰도 구축' },
+  { value: '오프라인 매장 방문 및 고객 유치', label: '오프라인 매장 방문 및 고객 유치' },
+  { value: '앱 설치 및 가용 사용자 유도', label: '앱 설치 및 가용 사용자 유도' },
+  { value: 'custom', label: '기타 (직접 입력)' },
+];
+
+const REQUIREMENT_OPTIONS = [
+  { value: '구매 전환 확률이 높은 고관여/고단가 핵심 키워드 위주 추출 (수익력 중시)', label: '구매 전환 확률이 높은 고관여/고단가 핵심 키워드 (수익력 중심)' },
+  { value: '경쟁 강도가 낮지만 꾸준한 수요가 있는 실속형 롱테일(Long-tail) 키워드 위주 추출 (안정성 중시)', label: '경쟁률이 낮고 꾸준히 유입되는 실속형 롱테일 키워드' },
+  { value: '긴급하게 당장의 즉각적 해결을 원하는 직접 문제 해결형 키워드 추출 (즉각 반응성 중시)', label: '즉시 해결책을 검색하는 문제 해결 중심 키워드' },
+  { value: '유행과 트렌드에 민감하고 SNS 확산 및 바이럴이 용이한 키워드 위주 추출 (화제성 중시)', label: '인스타그램/네이버 등 SNS 바이럴 및 트렌드 키워드' },
+  { value: '지속적인 관계 유지 및 구독/재구매 유도에 적합한 정보 제공성 키워드 위주 추출 (지속성 중시)', label: '구독 및 재구매 확률을 높이는 정보 제공성 키워드' },
+  { value: '경쟁사의 주요 트래픽을 효율적으로 우회하여 틈새 시장을 침투할 수 있는 키워드 추출 (공격성 중시)', label: '경쟁사를 피해 시장 틈새를 공략하는 우회 키워드' },
+  { value: 'custom', label: '기타 (직접 요구사항 입력)' },
+];
 
 const PATCH_NOTES = [
-  { date: '2026-06-06', content: '키워드 추천 결과물 자유 선택 및 간편 복사(Copy) 기능 추가' },
+  { date: '2026-06-09', content: '수익성 극대화를 위한 맞춤형 요구사항(드롭다운 및 직접 입력) 수집 기능 도입' },
+  { date: '2026-06-09', content: '추출 키워드 개수 선택 기능 추가 및 상세 추천 사유 & 수익화 연관성 리포트 대폭 강화' },
+  { date: '2026-06-09', content: '타겟 고객층 및 마케팅 목적 드롭다운 간편 선택 옵션 도입 & 메인 배너 개편' },
+  { date: '2026-06-06', content: '키워드 추천 결과물 자유 선택 및 편의성 개선' },
   { date: '2026-05-03', content: '심층 퍼플/인디고 배경 테마 적용 및 텍스트 시인성 최적화' },
   { date: '2026-05-03', content: '혁신적인 애니메이션 배경 적용 및 패치노트 실시간 업데이트 반영' },
   { date: '2026-04-19', content: '패치노트 기능 추가, API 예상 비용 표시 기능 추가, 초기 팝업 비활성화' },
@@ -34,14 +69,25 @@ export default function App() {
   const [apiKey, setApiKey] = useState(getInitialApiKey());
   const [userApiKey, setUserApiKey] = useState('');
   const [productName, setProductName] = useState('');
-  const [targetAudience, setTargetAudience] = useState('');
-  const [marketingGoal, setMarketingGoal] = useState('');
+  const [selectedAudience, setSelectedAudience] = useState('');
+  const [customAudience, setCustomAudience] = useState('');
+  const [selectedGoal, setSelectedGoal] = useState('');
+  const [customGoal, setCustomGoal] = useState('');
+  const [selectedRequirement, setSelectedRequirement] = useState('');
+  const [customRequirement, setCustomRequirement] = useState('');
+  const [keywordCount, setKeywordCount] = useState<number>(5);
+
+  const targetAudience = selectedAudience === 'custom' ? customAudience : selectedAudience;
+  const marketingGoal = selectedGoal === 'custom' ? customGoal : selectedGoal;
+  const targetRequirement = selectedRequirement === 'custom' ? customRequirement : selectedRequirement;
+
   const [output, setOutput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   
   const [showInstructions, setShowInstructions] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showPatchNotes, setShowPatchNotes] = useState(false);
   const [showApiCost, setShowApiCost] = useState(false);
@@ -51,7 +97,7 @@ export default function App() {
   const hasApiKey = apiKey.trim().length > 0 || userApiKey.trim().length > 0;
 
   const handleGenerate = async () => {
-    if (!productName || !targetAudience || !marketingGoal) {
+    if (!productName || !targetAudience || !marketingGoal || !targetRequirement) {
       setAlertMessage('모든 입력 항목을 채워주세요.');
       return;
     }
@@ -93,6 +139,8 @@ export default function App() {
             productName,
             targetAudience,
             marketingGoal,
+            targetRequirement,
+            keywordCount,
             userApiKey: userApiKey || apiKey,
           }),
         });
@@ -121,49 +169,96 @@ export default function App() {
           throw new Error('Cloudflare 배포 환경에서는 개별 API Key가 필요합니다. 우측 상단 [API Key 설정] 버튼을 클릭하여 유효한 Google Gemini API Key를 등록해주셔야 정상 작동합니다.');
         }
 
-        const prompt = `당신은 마케팅 전문가입니다. 다음 정보를 바탕으로 마케팅용 키워드를 추천해주세요.
-마크다운 문법(*, #, - 등)을 사용하지 말고 평문으로 작성해주세요.
+        const prompt = `당신은 대한민국 최고의 마케팅 및 비즈니스 전략 전문가입니다. 다음 정보를 바탕으로 실전에서 즉시 사용할 수 있는 마케팅용 키워드를 총 ${keywordCount}개 추천하고, 분석 리포트를 작성해주세요.
+가독성을 위해 깔끔한 줄바꿈과 띄어쓰기를 사용해 정돈된 텍스트로 답해주시고, 마크다운 특수문자(*, #, -, \` 등)를 전혀 사용하지 않는 일반 평문(Plain text) 형식으로 작성해주세요.
 
-제품/서비스명: ${productName}
-타겟 고객: ${targetAudience}
-마케팅 목적: ${marketingGoal}
+[입력 정보]
+- 제품/서비스명: ${productName}
+- 타겟 고객: ${targetAudience}
+- 마케팅 목적: ${marketingGoal}
+- 핵심 요구사항: ${targetRequirement}
+- 요청 추출 키워드 개수: ${keywordCount}개
 
-출력 형식:
-1. 핵심 키워드 (3개)
-2. 연관 키워드 (5개)
-3. 롱테일 키워드 (3개)
-4. 해시태그 추천 (5개)`;
+[작성 요구사항]
+추천된 각 키워드별로 다음 두 가지 항목을 반드시 구체적이고 자세하게 서술해 주세요:
+1) 왜 해당 키워드를 선정 및 추천하였는지에 대한 '추천 사유' (타겟 고객의 심리, 검색 의도, 시장 트렌드는 물론 우리 브랜드의 핵심 요구사항인 '${targetRequirement}'에 어떻게 부합하는지를 긴밀하게 반영)
+2) 이 키워드를 어떻게 실제 비즈니스 매출 및 수익 창출과 유기적으로 연결시킬 수 있는지에 대한 '수익화 연관성' (구매 전환 경로, 락인 전략, 상품 구성과의 관계 등)
 
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${activeKey}`;
-        const geminiResponse = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
+[출력 형식]
+추천 키워드 리포트 (요청 개수: ${keywordCount}개)
+
+[키워드 1] 키워드명
+• 추천 사유: (상세 기재)
+• 수익화 연관성: (상세 기재)
+
+[키워드 2] 키워드명
+• 추천 사유: (상세 기재)
+• 수익화 연관성: (상세 기재)
+
+... (지정한 ${keywordCount}번째 키워드까지 반복 작성)
+
+※ 추가 해시태그 추천 (5개):
+#해시태그1 #해시태그2 #해시태그3 #해시태그4 #해시태그5`;
+
+        const modelsToTry = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+        let lastGeminiErrorMsg = '';
+        let generatedText = '';
+
+        for (const modelName of modelsToTry) {
+          try {
+            console.log(`[Client Sandbox] Attempting direct response with model: ${modelName}`);
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${activeKey}`;
+            const geminiResponse = await fetch(geminiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                contents: [
                   {
-                    text: prompt,
+                    parts: [
+                      {
+                        text: prompt,
+                      },
+                    ],
                   },
                 ],
-              },
-            ],
-          }),
-        });
+              }),
+            });
 
-        if (!geminiResponse.ok) {
-          const geminiErrorData = await geminiResponse.json().catch(() => ({}));
-          const geminiErrorMsg = geminiErrorData?.error?.message || `HTTP ${geminiResponse.status}`;
-          throw new Error(`Google Gemini API 오류: ${geminiErrorMsg}`);
+            if (!geminiResponse.ok) {
+              const geminiErrorData = await geminiResponse.json().catch(() => ({}));
+              const geminiErrorMsg = geminiErrorData?.error?.message || `HTTP ${geminiResponse.status}`;
+              lastGeminiErrorMsg = geminiErrorMsg;
+              
+              // If API Key itself is invalid, fail fast
+              const lowerMsg = geminiErrorMsg.toLowerCase();
+              if (lowerMsg.includes('api key not valid') || lowerMsg.includes('invalid') || lowerMsg.includes('api_key_invalid')) {
+                throw new Error(`Google Gemini API 오류: ${geminiErrorMsg}`);
+              }
+              
+              console.warn(`Model ${modelName} failed, trying next. Error: ${geminiErrorMsg}`);
+              continue;
+            }
+
+            const geminiData = await geminiResponse.json();
+            const textResult = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textResult) {
+              generatedText = textResult;
+              break;
+            }
+          } catch (modelErr: any) {
+            lastGeminiErrorMsg = modelErr?.message || String(modelErr);
+            const lowerMsg = lastGeminiErrorMsg.toLowerCase();
+            if (lowerMsg.includes('api key not valid') || lowerMsg.includes('invalid') || lowerMsg.includes('api_key_invalid')) {
+              throw modelErr;
+            }
+            console.warn(`Fetch error for model ${modelName}:`, modelErr);
+          }
         }
 
-        const geminiData = await geminiResponse.json();
-        const generatedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-        
         if (!generatedText) {
-          throw new Error('Gemini API로부터 응답 텍스트를 받지 못했습니다.');
+          throw new Error(`Google Gemini API 오류: ${lastGeminiErrorMsg || '모든 모델 시도에 실패했습니다.'}`);
         }
 
         data = { text: generatedText };
@@ -248,9 +343,9 @@ export default function App() {
       {/* Top Image Banner */}
       <div className="relative w-full h-64 md:h-80 lg:h-96 bg-neutral-800 overflow-hidden shrink-0">
         <img 
-          src="https://picsum.photos/seed/data-analysis/1920/1080?grayscale" 
-          alt="Innovation Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105 hover:scale-110 transition-transform duration-10000"
+          src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1920&q=80" 
+          alt="Innovation Search & Keyword Background" 
+          className="absolute inset-0 w-full h-full object-cover opacity-50 scale-105 hover:scale-110 transition-transform duration-10000"
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-radial-[at_center] from-transparent to-[#0f0c29]/60 z-[1]"></div>
@@ -320,23 +415,94 @@ export default function App() {
             </div>
             <div>
               <label className="block text-xs font-bold text-indigo-300 uppercase tracking-widest mb-2">타겟 고객</label>
-              <input 
-                type="text" 
-                value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="예: 2030 직장인, 마케터"
-                className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-500"
-              />
+              <select 
+                value={selectedAudience}
+                onChange={(e) => setSelectedAudience(e.target.value)}
+                className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white cursor-pointer"
+              >
+                <option value="" className="bg-[#0f0c29] text-neutral-400">타겟 고객층을 선택해주세요</option>
+                {AUDIENCE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-[#0f0c29] text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              
+              {selectedAudience === 'custom' && (
+                <input 
+                  type="text" 
+                  value={customAudience}
+                  onChange={(e) => setCustomAudience(e.target.value)}
+                  placeholder="예: 2535 미혼 남성, 반려동물 보유 가구 등 직접 입력"
+                  className="w-full mt-2 px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-500 animate-in fade-in slide-in-from-top-2 duration-300"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-indigo-300 uppercase tracking-widest mb-2">마케팅 목적</label>
-              <input 
-                type="text" 
-                value={marketingGoal}
-                onChange={(e) => setMarketingGoal(e.target.value)}
-                placeholder="예: 브랜드 인지도 향상, 신규 가입자 유치"
-                className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-500"
-              />
+              <select 
+                value={selectedGoal}
+                onChange={(e) => setSelectedGoal(e.target.value)}
+                className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white cursor-pointer"
+              >
+                <option value="" className="bg-[#0f0c29] text-neutral-400">마케팅 목적을 선택해주세요</option>
+                {GOAL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-[#0f0c29] text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              
+              {selectedGoal === 'custom' && (
+                <input 
+                  type="text" 
+                  value={customGoal}
+                  onChange={(e) => setCustomGoal(e.target.value)}
+                  placeholder="예: 보도자료 배포용 이슈 메이킹, 크라웃 펀딩 펀딩율 달성 등 직접 입력"
+                  className="w-full mt-2 px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-500 animate-in fade-in slide-in-from-top-2 duration-300"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-indigo-300 uppercase tracking-widest mb-2">추가 요구사항 (수익성 극대화 필터)</label>
+              <select 
+                value={selectedRequirement}
+                onChange={(e) => setSelectedRequirement(e.target.value)}
+                className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white cursor-pointer"
+              >
+                <option value="" className="bg-[#0f0c29] text-neutral-400">수익화에 적합한 키워드 추출 요구사항 선택</option>
+                {REQUIREMENT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-[#0f0c29] text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              
+              {selectedRequirement === 'custom' && (
+                <input 
+                  type="text" 
+                  value={customRequirement}
+                  onChange={(e) => setCustomRequirement(e.target.value)}
+                  placeholder="예: 월간 검색 규모가 작더라도 실제 지불 장벽을 넘을 수 있는 키워드 직접 입력"
+                  className="w-full mt-2 px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-500 animate-in fade-in slide-in-from-top-2 duration-300"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-indigo-300 uppercase tracking-widest mb-2">추출할 키워드 개수</label>
+              <select 
+                value={keywordCount}
+                onChange={(e) => setKeywordCount(Number(e.target.value))}
+                className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white cursor-pointer hover:border-indigo-500/30"
+              >
+                <option value={1} className="bg-[#0f0c29] text-white">1개</option>
+                <option value={5} className="bg-[#0f0c29] text-white">5개 (권장)</option>
+                <option value={10} className="bg-[#0f0c29] text-white">10개</option>
+                <option value={20} className="bg-[#0f0c29] text-white">20개</option>
+                <option value={30} className="bg-[#0f0c29] text-white">30개</option>
+              </select>
             </div>
             
             <button 
@@ -500,13 +666,27 @@ export default function App() {
             <p className="text-sm text-neutral-400 mb-6">
               웹 배포 환경에서 사용하기 위해 Google Gemini API Key를 입력해주세요.
             </p>
-            <input 
-              type="password" 
-              value={userApiKey}
-              onChange={(e) => setUserApiKey(e.target.value)}
-              placeholder="AIzaSy..."
-              className="w-full px-4 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-600 mb-6"
-            />
+            <div className="relative mb-6">
+              <input 
+                type={showApiKey ? "text" : "password"} 
+                value={userApiKey}
+                onChange={(e) => setUserApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full pl-4 pr-12 py-3 bg-neutral-950/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all text-white placeholder:text-neutral-600"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-neutral-400 hover:text-white transition-colors"
+                title={showApiKey ? "비밀번호 숨기기" : "비밀번호 보기"}
+              >
+                {showApiKey ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
             <div className="flex gap-3">
               <button 
                 onClick={() => setShowApiKeyModal(false)}
